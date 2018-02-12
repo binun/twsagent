@@ -21,53 +21,27 @@ public class EWrapperImpl implements EWrapper {
 	//! [socket_declare]
 	private EReaderSignal readerSignal;
 	private EClientSocket clientSocket;
-	private Object m_histMutex = new Object();
+	
 	protected int currentOrderId = -1;
-	private String dirRes = "results";
-	private File dirR = null;
-	private Map<Integer,String> filesMap = new HashMap<Integer,String>();
+	private Shared instance = null;
+	private String index;
+	private int errors=0;
 	
 	//! [socket_declare]
 	
 	//! [socket_init]
-	public EWrapperImpl() {
+	public EWrapperImpl(String index) {
 		readerSignal = new EJavaSignal();
 		clientSocket = new EClientSocket(this, readerSignal);
+		instance = Shared.getInstance(clientSocket,index);
+		this.index = index;
 	}
 	//! [socket_init]
 	public EClientSocket getClient() {
 		return clientSocket;
 	}
 	
-	public Object getHistMutex() {
-		return m_histMutex;
-	}
 	
-	public void setResDir(String r) {
-		this.dirRes = r;
-		
-		dirR = new File(r);
-		if (!dirR.exists())
-			dirR.mkdir();
-		else {
-			for(File file: dirR.listFiles()) 
-			   file.delete();
-		}
-	}
-	
-	public void startDownload(int req,String sticker) {
-		filesMap.put(req, sticker);
-		File toWrite = new File(this.dirR, sticker+".csv");
-		PrintWriter out = null;
-		try {
-			out = new PrintWriter(new BufferedWriter(new FileWriter(toWrite.getCanonicalPath(), true)));
-		} catch (IOException e) {
-			return;		
-		}
-		out.println("Sticker,Date,Open,High,Low,Close,Volume\n");
-		out.close();
-		
-	}
 	
 	public EReaderSignal getSignal() {
 		return readerSignal;
@@ -80,8 +54,9 @@ public class EWrapperImpl implements EWrapper {
 	 //! [tickprice]
 	@Override
 	public void tickPrice(int tickerId, int field, double price, TickAttr attribs) {
-		System.out.println("Tick Price. Ticker Id:"+tickerId+", Field: "+field+", Price: "+price+", CanAutoExecute: "+ attribs.canAutoExecute()
-		+ ", pastLimit: " + attribs.pastLimit() + ", pre-open: " + attribs.preOpen());
+		System.out.println("Tick Price. Ticker Id:"+tickerId+", Field: "+field+", Price: "+price);
+		
+		//instance.updateLastData(tickerId, field, price);
 		
 		// Tick Price. Ticker Id:4001, Field: 4, Price: 88.34, CanAutoExecute: false, pastLimit: false, pre-open: false
 		// field=4
@@ -91,7 +66,7 @@ public class EWrapperImpl implements EWrapper {
 	//! [ticksize]
 	@Override
 	public void tickSize(int tickerId, int field, int size) {
-		System.out.println("Tick Size. Ticker Id:" + tickerId + ", Field: " + field + ", Size: " + size);
+		System.out.println("Tick Size. Ticker Id:" + tickerId + ", Field: " + field + ", Value: " + size);
 	}
 	//! [ticksize]
 	
@@ -101,8 +76,8 @@ public class EWrapperImpl implements EWrapper {
 			double impliedVol, double delta, double optPrice,
 			double pvDividend, double gamma, double vega, double theta,
 			double undPrice) {
-		System.out.println("TickOptionComputation. TickerId: "+tickerId+", field: "+field+", ImpliedVolatility: "+impliedVol+", Delta: "+delta
-                +", OptionPrice: "+optPrice+", pvDividend: "+pvDividend+", Gamma: "+gamma+", Vega: "+vega+", Theta: "+theta+", UnderlyingPrice: "+undPrice);
+		//System.out.println("TickOptionComputation. TickerId: "+tickerId+", field: "+field+", ImpliedVolatility: "+impliedVol+", Delta: "+delta
+             //   +", OptionPrice: "+optPrice+", pvDividend: "+pvDividend+", Gamma: "+gamma+", Vega: "+vega+", Theta: "+theta+", UnderlyingPrice: "+undPrice);
 	}
 	//! [tickoptioncomputation]
 	
@@ -116,7 +91,7 @@ public class EWrapperImpl implements EWrapper {
 	//! [tickstring]
 	@Override
 	public void tickString(int tickerId, int tickType, String value) {
-		System.out.println("Tick string. Ticker Id:" + tickerId + ", Type: " + tickType + ", Value: " + value);
+		//System.out.println("Tick string. Ticker Id:" + tickerId + ", Type: " + tickType + ", Value: " + value);
 	}
 	//! [tickstring]
 	@Override
@@ -124,9 +99,9 @@ public class EWrapperImpl implements EWrapper {
 			String formattedBasisPoints, double impliedFuture, int holdDays,
 			String futureLastTradeDate, double dividendImpact,
 			double dividendsToLastTradeDate) {
-		System.out.println("TickEFP. "+tickerId+", Type: "+tickType+", BasisPoints: "+basisPoints+", FormattedBasisPoints: "+
-			formattedBasisPoints+", ImpliedFuture: "+impliedFuture+", HoldDays: "+holdDays+", FutureLastTradeDate: "+futureLastTradeDate+
-			", DividendImpact: "+dividendImpact+", DividendsToLastTradeDate: "+dividendsToLastTradeDate);
+		//System.out.println("TickEFP. "+tickerId+", Type: "+tickType+", BasisPoints: "+basisPoints+", FormattedBasisPoints: "+
+		//+", ImpliedFuture: "+impliedFuture+", HoldDays: "+holdDays+", FutureLastTradeDate: "+futureLastTradeDate+
+		//	", DividendImpact: "+dividendImpact+", DividendsToLastTradeDate: "+dividendsToLastTradeDate);
 	}
 	//! [orderstatus]
 	@Override
@@ -271,22 +246,6 @@ public class EWrapperImpl implements EWrapper {
 	public void historicalData(int reqId, Bar bar) {
 		System.out.println(reqId+" - Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
 		
-		String sticker = filesMap.get((Integer)reqId);
-		if (sticker==null)
-			return;
-		
-		File toWrite = new File(this.dirR, sticker+".csv");
-		PrintWriter out = null;
-		try {
-			out = new PrintWriter(new BufferedWriter(new FileWriter(toWrite.getCanonicalPath(), true)));
-		} catch (IOException e) {
-			return;		
-		}
-		out.println(sticker+","+bar.time()+"," +bar.open()+","+bar.high()+","+bar.low()+","+bar.close()+","+bar.volume()+"\n");
-		out.close();
-		
-		
-		
 		
 		//System.out.println("Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
 		
@@ -332,6 +291,7 @@ public class EWrapperImpl implements EWrapper {
 	public void realtimeBar(int reqId, long time, double open, double high,
 			double low, double close, long volume, double wap, int count) {
 		System.out.println("RealTimeBars. " + reqId + " - Time: " + time + ", Open: " + open + ", High: " + high + ", Low: " + low + ", Close: " + close + ", Volume: " + volume + ", Count: " + count + ", WAP: " + wap);
+	    instance.updateLastData(reqId, high, close, volume);
 	}
 	//! [realtimebar]
 	@Override
@@ -433,16 +393,23 @@ public class EWrapperImpl implements EWrapper {
 	@Override
 	public void error(Exception e) {
 		System.out.println("Exception: "+e.getMessage());
+		errors++;
 	}
 
 	@Override
 	public void error(String str) {
 		System.out.println("Error STR");
+		errors++;
 	}
 	//! [error]
 	@Override
 	public void error(int id, int errorCode, String errorMsg) {
-		System.out.println("Error. Id: " + id + ", Code: " + errorCode + ", Msg: " + errorMsg + "\n");
+		//
+		if (errorCode==200) {
+		errors++;
+		//System.out.println("Error. Id: " + id + ", Code: " + errorCode + " NumOfErrors " + errors+ "\n");
+		instance.updateLastData(id,0.0,0.0,0.0);
+		}
 	}
 	//! [error]
 	@Override
