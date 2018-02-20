@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -76,6 +77,16 @@ public class Testbed {
 	}
     
 	public static void main(String[] args) throws InterruptedException {
+		
+		LocalTime start = LocalTime.parse("16:30:00");
+		LocalTime stop = LocalTime.parse("22:55:00");
+		LocalTime n = LocalTime.now();
+		Boolean isTargetAfterStartAndBeforeStop = ( n.isAfter( start ) && n.isBefore( stop ) ) ;
+		if (!isTargetAfterStartAndBeforeStop) {
+			System.out.println("No trade");
+			return;
+		}
+		
 		
 		if (args.length<1)
 			return;

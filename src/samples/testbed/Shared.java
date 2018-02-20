@@ -92,26 +92,39 @@ public class Shared {
 		double close = Double.parseDouble(lastR[5]);
 		double volume = Double.parseDouble(lastR[6]);
 		
-		if (lastHigh==0.0 && lastClose==0.0) {
-			System.out.println("No data to update " + st );
+		if (lastHigh<=0.0) {
+			lastHigh=high;
 		}
 		
-		if (lastHigh>0)
+		if (lastClose<=0.0) {
+			lastClose=close;
+		}
+		
+		if (lastVolume<=0.0) {
+			lastVolume=volume;
+		}
+		
+		if (lastHigh!=high) {
 			high=lastHigh;
-		if (lastClose>0)
-			close=lastClose;
-		if (lastVolume>0)
-			volume = lastVolume;
-		
-		
-		
-		try {
-		    PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
-		    out.println(st+","+datestr+","+open+","+high+","+low+","+close+","+volume+"\n");
-		    out.close();
-		} catch (Exception e) {
-		    return;
 		}
+		if (lastClose!=close) {
+			close=lastClose;
+			
+		}
+			
+		if (lastVolume !=volume) {
+			volume = lastVolume;
+		}
+		
+		//if (newDataArrived) {
+		  try {
+		       PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
+		       out.println(st+","+datestr+","+open+","+high+","+low+","+close+","+volume+"\n");
+		       out.close();
+		      } catch (Exception e) {
+		            return;
+		      }
+		//}
 	}
 	
 	public synchronized boolean allUpdated() {
