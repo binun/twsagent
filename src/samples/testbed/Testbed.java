@@ -3,7 +3,10 @@ import java.io.BufferedReader;
 import java.io.File;
 
 import java.io.FileReader;
-
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.ArrayList;
@@ -35,6 +38,7 @@ public class Testbed {
 	private static String header = "PREDICTION";
 	
     private static EWrapperImpl wrapper = null;
+    private static boolean isLast=false;
 	
 	public static void sendemail(String filename) {
 		Properties props = new Properties();
@@ -78,34 +82,27 @@ public class Testbed {
     
 	public static void main(String[] args) throws InterruptedException {
 		
-		LocalTime start = LocalTime.parse("16:30:00");
-		LocalTime stop = LocalTime.parse("22:55:00");
-		LocalTime n = LocalTime.now();
-		Boolean isTargetAfterStartAndBeforeStop = ( n.isAfter( start ) && n.isBefore( stop ) ) ;
-		if (!isTargetAfterStartAndBeforeStop) {
-			System.out.println("No trade");
-			return;
-		}
+//		LocalTime start = LocalTime.parse("16:30:00");
+//		LocalTime stop = LocalTime.parse("22:55:00");
+//		LocalTime n = LocalTime.now();
+//		Boolean isTargetAfterStartAndBeforeStop = ( n.isAfter( start ) && n.isBefore( stop ) ) ;
+//		if (!isTargetAfterStartAndBeforeStop) {
+//			System.out.println("No trade");
+//			return;
+//		}
 		
 		
 		if (args.length<1)
 			return;
 		
-		File f = new File(args[0]);
-		if (f.isFile()) {
-			sendemail(f.getName());
-			return;
-		}
-	
-		if (!f.isDirectory()) {
-			return;
-		}
 		
-		wrapper = new EWrapperImpl(args[0]);
+		if (args[1].equals("last")) 
+			isLast=true;
 		
+        wrapper = new EWrapperImpl(args[0],isLast);
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
-		final Shared instance = Shared.getInstance(m_client, args[0]);
+		final Shared instance = Shared.getInstance(m_client, args[0],isLast);
 		
 		
 		//! [connect]
@@ -126,18 +123,26 @@ public class Testbed {
 		    }
 		}).start();
 		
-		//Thread.sleep(1000);
-
-		//dataRequests(wrapper.getClient());
-		instance.requestAllData();
+	
+		instance.requestAllData(isLast);
 		
-		for (;;) {
+		for (int i=0; i <120;i++) {
 			Thread.sleep(500);
 			if (instance.allUpdated())
 				break;
 			
 		}
+		
+		
 		System.out.println("Done");
+		try {
+			if (isLast)
+			   instance.flushLastData();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		instance.cancelAll();
 		m_client.eDisconnect();
 	}
 }

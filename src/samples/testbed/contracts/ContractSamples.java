@@ -170,12 +170,12 @@ public class ContractSamples {
 	public static Contract USStockAtSmart(String sticker) {
 		Contract contract = new Contract();
 		contract.symbol(sticker);
-		contract.secType("STK");
 		contract.currency("USD");
-		contract.exchange("SMART");
 		
-		//contract.secType("CASH");
-		//contract.exchange("IDEALPRO");
+		contract.secType("STK");
+		//contract.exchange("SMART");
+	
+		contract.exchange("ISLAND");
 		
 		return contract;
 	}

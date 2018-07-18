@@ -3,38 +3,68 @@ package samples.testbed;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 
+
+import com.ib.client.Bar;
 import com.ib.client.EClient;
 
 import samples.testbed.contracts.ContractSamples;
 
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 
 public class Shared {
 	
 	private String dir = "";
 	private int errors=0;
 	private ArrayList<String> stickers = new ArrayList<String>();
-	private int [] updates = null;
-	private int allStickers = 0;
-    public  int startId=4001;
+	
+	private Set<Integer> allStickers = new HashSet<Integer>();
+    public  int startId=1;
+    private int curOrder=0;
 	//private ArrayList<HashMap<String, Double>> lastData = new ArrayList<HashMap<String,Double>>();
 	private static Shared instance = null;
 	private EClient mclient = null;
+	private Map<String,Double> lastCloses = new HashMap<String,Double>();
 	
-	public void requestAllData() {
-		//this.requestDataForSticker("AXP");
+	public synchronized int getStartID() {
+		return startId;
+	}
+	
+	public synchronized void setStartID(int st) {
+		startId = st;
+	}
+	public void requestAllData(boolean last) {
+		while (this.getStartID()==-1) {
+			try {
+				for (int i=0; i < 5; i++) Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
 		for (String sticker: stickers) {
-			this.requestDataForSticker(sticker);
+			this.requestDataForSticker(sticker,last);
 			
 			try {
 				Thread.sleep(1000);
@@ -47,12 +77,30 @@ public class Shared {
 	}
 	
 	
-	public synchronized void requestDataForSticker(String sticker) {
+	public synchronized void requestDataForSticker(String sticker,boolean last) {
 		int i = stickers.indexOf(sticker);
 		if (i<0)
 			return;
-		mclient.reqRealTimeBars(startId+i, ContractSamples.USStockAtSmart(sticker), 5, "MIDPOINT", false, null);
-		//mclient.reqMktData(startId+i, ContractSamples.USStockAtSmart(sticker), "100,221,233", false, false,null);
+		
+		Calendar cal = Calendar.getInstance();
+		cal.add(Calendar.DAY_OF_MONTH, -1);
+        SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+        String formatted = form.format(cal.getTime());
+        System.out.println("Requesting history for " + sticker);
+        if (last==false)
+        mclient.reqHistoricalData(startId+i, 
+        		ContractSamples.USStockAtSmart(sticker), 
+        		formatted, 
+        		"4 M", 
+        		"1 day", 
+        		"MIDPOINT", 
+        		0, 
+        		1, 
+        		false, 
+        		null);
+		
+        else
+        	mclient.reqRealTimeBars(startId+i, ContractSamples.USStockAtSmart(sticker), 5, "MIDPOINT", false, null);
 	}
 	
 	public synchronized void reportError() {
@@ -61,132 +109,149 @@ public class Shared {
 	
 	public synchronized void updateLastData(int order, double high,double close, double volume) {
 		int st = order-startId;
-	    if (updates[st]==0) {
-		  this.updateSticker(stickers.get(st), high, close, volume);
-		  System.out.println("            Sticker " + stickers.get(st) + " got update ");
-		  updates[st]=1;
-	
-		//mclient.cancelMktData(order);
-		  mclient.cancelRealTimeBars(order);
-		  allStickers++;
+		String sticker = stickers.get(st);
+		if (lastCloses.containsKey(sticker)==false)
+	       lastCloses.put(sticker, close);
+		 
+		System.out.println("            Sticker " + sticker + " got update ");
 		  
-		  System.out.println("        Sticker Updates: " + allStickers + " against " + stickers.size());
-	    }
+		//mclient.cancelRealTimeBars(order);
 	}
 	
-	private void updateSticker(String st, double lastHigh, double lastClose, double lastVolume) {
-		String path = this.dir+File.separator+st+".csv";
-		String [] lastR = this.lastRow(path);
+	public synchronized void updateHistData(int order, Bar bar) {
+		int st = order-startId;
+	   
+		this.updateStickerHist(stickers.get(st), bar);
+		System.out.println("            Sticker " + stickers.get(st) + " got history item ");
+		//mclient.cancelHistoricalData(order);
+		 
+		
+		//System.out.println("         History: " + allStickers + " against " + stickers.size());
+	    
+	}
 	
+	private void updateStickerHist(String st, Bar bar) {
+		
+		String path = this.dir+File.separator+st+".csv";
+		
+		try {
+		       PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
+		       String datestr = bar.time().split(" ")[0];
+		       double open = bar.open();
+		       double high = bar.high();
+		       double low = bar.low();
+		       double close = bar.close();
+		       double volume = bar.volume();
+		       
+		       out.println(datestr+" "+open+" "+high+" "+low+" "+close+" "+volume+"\n");
+		       out.close();
+		    } catch (Exception e) {
+		            return;
+		    }
+		//}
+	}
+	
+	public void flushLastData() throws IOException {
+		
 		Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
 	     
 	    int day = calendar.get(Calendar.DATE);      
 	    int month = calendar.get(Calendar.MONTH) + 1;
 	    int year = calendar.get(Calendar.YEAR);
 	    String datestr = String.format("%d%02d%02d",year,month,day);
-	    //String date = lastR[1]; 20170830
-
-		double open = Double.parseDouble(lastR[2]);
-		double high = Double.parseDouble(lastR[3]);
-		double low = Double.parseDouble(lastR[4]);
-		double close = Double.parseDouble(lastR[5]);
-		double volume = Double.parseDouble(lastR[6]);
 		
-		if (lastHigh<=0.0) {
-			lastHigh=high;
-		}
-		
-		if (lastClose<=0.0) {
-			lastClose=close;
-		}
-		
-		if (lastVolume<=0.0) {
-			lastVolume=volume;
-		}
-		
-		if (lastHigh!=high) {
-			high=lastHigh;
-		}
-		if (lastClose!=close) {
-			close=lastClose;
+		for (String st : stickers) {
+			String path = this.dir+File.separator+st+".csv";
+			File p = new File(path); 
+			if (p.exists()==false)
+				continue;
 			
-		}
+			System.out.print(" Saving data for " + st + " ");
 			
-		if (lastVolume !=volume) {
-			volume = lastVolume;
-		}
-		
-		//if (newDataArrived) {
-		  try {
-		       PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
-		       out.println(st+","+datestr+","+open+","+high+","+low+","+close+","+volume+"\n");
-		       out.close();
-		      } catch (Exception e) {
-		            return;
-		      }
-		//}
+			Double val=1.0;
+			if (lastCloses.containsKey(st)) {
+			   val = lastCloses.get(st);
+			   System.out.println(":real last data");
+			}
+			else {
+				  
+				  BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(path)));
+				  String strLine = null, tmp="",lastLine="";
+				  while ((tmp = br.readLine()) != null) {
+				     strLine = tmp;
+				     if (strLine.length()>3)
+				    	 lastLine=strLine;
+				  }
+				  
+				  if (lastLine.length()>3) {
+				     String [] components = lastLine.split(" ");
+				     val = Double.parseDouble(components[components.length-2]);
+				  }
+				  else {
+				       System.out.println(":mockery");
+				       val=1.0;
+				  }
+			}
+		 
+		   PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
+		   out.println(datestr+" "+1.0+" "+1.0+" "+1.0+" "+val+" "+1.0+"\n");
+		   out.close();
+	     }
 	}
 	
 	public synchronized boolean allUpdated() {
-		return allStickers==stickers.size();
+		System.out.println(" Current " + allStickers.size()+ " Target " + stickers.size());
+		return allStickers.size()==stickers.size();
 	}
 	
-	private String[] lastRow(String fn) {
-		String lastLine=null;
-		BufferedReader reader = null;
-		try {
-			reader = new BufferedReader(new FileReader(fn));
-			String line = null;
-	        while((line = reader.readLine()) != null) {
-	        	if (line.length()>1)
-                   lastLine=line;
-	        }
-	        reader.close();
+	public synchronized void oneMore(int orderId) {
+		allStickers.add(new Integer(orderId));
+	}
+	
+	public void cancelAll() {
+		for (Integer order: allStickers) {
+			mclient.cancelHistoricalData(order);
 		}
+	}
+	
+	
+	
 
-	    catch (Exception x) {
-	        return null;
-	    }
+	private Shared(EClient client, String index,boolean last) {
 		
-		try {
-			reader.close();
-		} catch (Exception e) {
-			
-			return null;
-		}
-		
-		if (lastLine==null)
-			return null;
-		return lastLine.split(",");
-	}
-	
-	
-	
-	private Shared(EClient client, String dir) {
-		this.dir = dir;
 		this.mclient = client;
+		this.dir=index+"_csv";
+	
+		File theDir = new File(dir); 
+		if (!theDir.exists())
+		     theDir.mkdir();
+		else {
+			if (last==false) 
+			  for(File file: theDir.listFiles()) 
+			      if (!file.isDirectory()) 
+			          file.delete();
+		}
 		
-		File aDirectory = new File(dir);
-
-	    String[] filesInDir = aDirectory.list();
-
-	    for ( int i=0; i<filesInDir.length; i++ )
-	    {
-	       String f = filesInDir[i];
-	       String extensionRemoved = f.split("\\.")[0];
-	       stickers.add(extensionRemoved);
-	       
-	    }
+		String stickernames = index+"_stickers.csv";
+		File f = new File(stickernames);
 		
-		updates = new int[stickers.size()];
-		for (int i=0; i < stickers.size();i++)
-			updates[i] = 0;
-			//lastData.add(new HashMap<String,Double>());
+		if (!f.exists()) {
+			System.out.println("No sticker set");
+			System.exit(0);
+		}
+		
+		
+		try {
+			stickers = (ArrayList<String>) Files.readAllLines(FileSystems.getDefault().getPath(stickernames), StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			System.out.println("No sticker set");
+			System.exit(0);
+		}
 	}
 	
-	public static Shared getInstance(EClient c, String d) {
+	public static Shared getInstance(EClient c, String d, boolean last) {
 		if (instance==null)
-			instance=new Shared(c, d);
+			instance=new Shared(c, d,last);
 		return instance;
 	}
 }

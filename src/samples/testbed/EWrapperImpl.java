@@ -30,10 +30,10 @@ public class EWrapperImpl implements EWrapper {
 	//! [socket_declare]
 	
 	//! [socket_init]
-	public EWrapperImpl(String index) {
+	public EWrapperImpl(String index,boolean islast) {
 		readerSignal = new EJavaSignal();
 		clientSocket = new EClientSocket(this, readerSignal);
-		instance = Shared.getInstance(clientSocket,index);
+		instance = Shared.getInstance(clientSocket,index,islast);
 		this.index = index;
 	}
 	//! [socket_init]
@@ -168,6 +168,7 @@ public class EWrapperImpl implements EWrapper {
 	public void nextValidId(int orderId) {
 		System.out.println("Next Valid Id: ["+orderId+"]");
 		currentOrderId = orderId;
+		//instance.setStartID(currentOrderId);
 	}
 	//! [nextvalidid]
 	
@@ -244,8 +245,9 @@ public class EWrapperImpl implements EWrapper {
 	//! [historicaldata]
 	@Override
 	public void historicalData(int reqId, Bar bar) {
-		System.out.println(reqId+" - Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
+		System.out.println("HIST "+reqId+" Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
 		
+		instance.updateHistData(reqId, bar);
 		
 		//System.out.println("Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
 		
@@ -257,6 +259,7 @@ public class EWrapperImpl implements EWrapper {
 	@Override
 	public void historicalDataEnd(int reqId, String startDateStr, String endDateStr) {
 		System.out.println("HistoryEnd " + " Start Date: "+startDateStr+", End Date: "+endDateStr);
+		instance.oneMore(reqId);
 		//this.m_histMutex.notify();
 	}
 	//! [historicaldataend]
@@ -407,8 +410,8 @@ public class EWrapperImpl implements EWrapper {
 		//
 		if (errorCode==200) {
 		errors++;
-		//System.out.println("Error. Id: " + id + ", Code: " + errorCode + " NumOfErrors " + errors+ "\n");
-		instance.updateLastData(id,0.0,0.0,0.0);
+		System.out.println("Error. Id: " + id + ", Code: " + errorCode + " Detail: " + errorMsg+ "\n");
+		//instance.updateLastData(id,0.0,0.0,0.0);
 		}
 	}
 	//! [error]
