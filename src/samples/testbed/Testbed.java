@@ -11,8 +11,9 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 
 import samples.testbed.contracts.ContractSamples;
 
@@ -34,19 +35,44 @@ public class Testbed {
 	private static String myemail = "astartradingltd@gmail.com";
 	private static String mypass = "a*strading";
 	
-	private static String targets = "shlomidolev@gmail.com,binunalex@gmail.com";
+//	private static String myemail = "binunalex@gmail.com";
+//	private static String mypass = "BW~35wc&";
+	
+	private static String targets = "binunalex@gmail.com,shlomidolev@gmail.com";
 	private static String header = "PREDICTION";
 	
     private static EWrapperImpl wrapper = null;
     private static boolean isLast=false;
+    
+    private static String lastPrediction(String filename) {
+    	try {
+			
+		    BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(filename)));
+		    
+		    String strLine = null, tmp="",lastLine="";
+			while ((tmp = bufferedReader.readLine()) != null) {
+			     strLine = tmp;
+			     if (strLine.length()>3)
+			    	 lastLine=strLine;
+			  }
+		    bufferedReader.close();
+		    String[] llc = lastLine.split(",");
+		    String what = llc[1];
+		    return what;
+		} catch (Exception e) {
+			return "";
+		}
+    }
 	
 	public static void sendemail(String filename) {
 		Properties props = new Properties();
+		
 		props.put("mail.smtp.host", "smtp.gmail.com");
 		props.put("mail.smtp.socketFactory.port", "465");
 		props.put("mail.smtp.socketFactory.class","javax.net.ssl.SSLSocketFactory");
 		props.put("mail.smtp.auth", "true");
 		props.put("mail.smtp.port", "465");
+		
 		
 		Session session = Session.getDefaultInstance(props,
 				new javax.mail.Authenticator() {
@@ -54,48 +80,31 @@ public class Testbed {
 						return new PasswordAuthentication(myemail,mypass);
 					}
 				});
-		
 		try {
-			
-			File file = new File(filename);
-		    FileReader fileReader = new FileReader(file);
-		    BufferedReader bufferedReader = new BufferedReader(fileReader);
-		    String linelongs = bufferedReader.readLine();
-		    String lineshorts = bufferedReader.readLine();
-		    fileReader.close();
+		String what = lastPrediction(filename);
+		Message message = new MimeMessage(session);
+		message.setFrom(new InternetAddress(myemail));
+		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(targets));
+		
+		message.setSubject(header);
+		message.setText(what);
 
-			Message message = new MimeMessage(session);
-			message.setFrom(new InternetAddress(myemail));
-			message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(targets));
-			
-			message.setSubject(header);
-			message.setText("LONGS: " + linelongs + "; SHORTS: " + lineshorts);
+		Transport.send(message);
 
-			Transport.send(message);
-
-			System.out.println("Done");
-
-		} catch (Exception e) {
-			System.out.println("Cannot send email " + e.getMessage());
+		System.out.println("Done");
 		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
+		}
+		
+		
 	}
     
 	public static void main(String[] args) throws InterruptedException {
 		
-//		LocalTime start = LocalTime.parse("16:30:00");
-//		LocalTime stop = LocalTime.parse("22:55:00");
-//		LocalTime n = LocalTime.now();
-//		Boolean isTargetAfterStartAndBeforeStop = ( n.isAfter( start ) && n.isBefore( stop ) ) ;
-//		if (!isTargetAfterStartAndBeforeStop) {
-//			System.out.println("No trade");
-//			return;
-//		}
-		
-		
 		if (args.length<1)
 			return;
-		
-		
+				
 		if (args[1].equals("last")) 
 			isLast=true;
 		
@@ -123,7 +132,18 @@ public class Testbed {
 		    }
 		}).start();
 		
-	
+		instance.reqPosition();
+		
+		if (args[1].equals("mail")) {
+			sendemail("maillog.csv");
+//			Map<String,Double> plan = new HashMap<String,Double>();
+//			plan.put("CVX", 1.0);
+//			plan.put("WMT", -1.0);
+			String lp = lastPrediction("maillog.csv");
+			instance.runAsPlan(lp);
+			return;
+		}
+		
 		instance.requestAllData(isLast);
 		
 		for (int i=0; i <120;i++) {

@@ -20,6 +20,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.TimeZone;
 
 
@@ -27,6 +28,7 @@ import com.ib.client.Bar;
 import com.ib.client.EClient;
 
 import samples.testbed.contracts.ContractSamples;
+import samples.testbed.orders.OrderSamples;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,11 +42,141 @@ public class Shared {
 	
 	private Set<Integer> allStickers = new HashSet<Integer>();
     public  int startId=1;
-    private int curOrder=0;
-	//private ArrayList<HashMap<String, Double>> lastData = new ArrayList<HashMap<String,Double>>();
+    private volatile int curOrder=-1;
+	
 	private static Shared instance = null;
 	private EClient mclient = null;
 	private Map<String,Double> lastCloses = new HashMap<String,Double>();
+	private Map<String,Double> position = new HashMap<String,Double>();
+	
+	private List<String> longs=new ArrayList<String>();
+	private List<String> shorts=new ArrayList<String>();
+	
+    private static double investment = 500;
+    
+    private void decomposeLast(String msg) {
+    	
+		StringTokenizer st = new StringTokenizer(msg, ":// ");
+		longs.clear();
+		shorts.clear();
+		boolean nowlong=false;
+		boolean nowshort=false;
+		
+		while (st.hasMoreTokens()) {
+			String tok = st.nextToken().toLowerCase();
+			if (tok.equals("longs")) {
+				nowlong=true;
+				nowshort=false;
+				continue;
+			}
+			
+			if (tok.equals("shorts")) {
+				nowlong=false;
+				nowshort=true;
+				continue;
+			}
+			
+			if (nowlong && nowshort==false) 
+				longs.add(tok);
+			if (nowshort && nowlong==false)
+				shorts.add(tok);
+		}
+    }
+			
+		
+    public void setOrderId(int orderId) {
+    	curOrder = orderId;
+    	System.out.println("Next Valid Id: ["+curOrder+"]");
+    }
+	
+	public synchronized void reqPosition() {
+		mclient.reqPositions();
+		try {
+			this.wait();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	public synchronized void relPosition()  {
+		this.notify();
+	}
+
+	
+	public synchronized void updatePosition(String sticker,double pos, double avgCost) {
+		System.out.println("Position. "+sticker+", Position: "+pos);
+	    
+		position.put(sticker, pos);
+	}
+	
+	public void runAsPlan(String what) {
+		this.decomposeLast(what);
+		Map<String, Double> plan = this.calculatePlan(longs, shorts);
+		this.executeOrders(plan);
+	}
+	
+	private Map<String,Double> calculatePlan(List<String> longs,List<String> shorts) {
+		Map<String,Double> plan = new HashMap<String,Double>();
+		for (String l:longs) {
+			if (position.containsKey(l)) {
+				Double q = position.get(l);
+				if (q<0)
+					plan.put(l, -2*q);
+				position.remove(l);
+			}
+			else
+			  plan.put(l, 1.0);
+		}	
+		
+		for (String s:shorts) {
+			if (position.containsKey(s)) {
+				Double q = position.get(s);
+				if (q>0)
+					plan.put(s, -2*q);
+				position.remove(s);
+			}
+			else
+				plan.put(s, -1.0);
+		}
+		
+		for (String k:position.keySet()) {
+			Double q = position.get(k);
+			plan.put(k, -q);
+		}
+		
+		return plan;
+	}
+	
+	public synchronized void placeOrder(String sticker,String action,double quantity) {
+		
+		System.out.println(sticker + " to " + action);
+		mclient.placeOrder(curOrder++, ContractSamples.USStockAtSmart(sticker), OrderSamples.MarketOrder(action, quantity));
+	}
+	
+	public synchronized void executeOrders(Map<String,Double> plan) {
+		while (curOrder<=0) {}
+		for (String key: plan.keySet()) {
+			Double quantity = plan.get(key);
+			String action="";
+			if (quantity>0) {
+				action = "BUY";
+			}
+			else {
+				action="SELL";
+				quantity = -quantity;
+			}
+	     this.placeOrder(key, action, quantity);	
+		}
+		
+		for (int i=0; i < 60; i++)
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	}
 	
 	public synchronized int getStartID() {
 		return startId;

@@ -166,8 +166,9 @@ public class EWrapperImpl implements EWrapper {
 	//! [nextvalidid]
 	@Override
 	public void nextValidId(int orderId) {
-		System.out.println("Next Valid Id: ["+orderId+"]");
+		
 		currentOrderId = orderId;
+		instance.setOrderId(orderId);
 		//instance.setStartID(currentOrderId);
 	}
 	//! [nextvalidid]
@@ -248,10 +249,6 @@ public class EWrapperImpl implements EWrapper {
 		System.out.println("HIST "+reqId+" Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
 		
 		instance.updateHistData(reqId, bar);
-		
-		//System.out.println("Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
-		
-		//System.out.println("HistoricalData. "+reqId+" - Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume()+", Count: "+bar.count()+", WAP: "+bar.wap());
 	}
 	//! [historicaldata]
 	
@@ -336,7 +333,8 @@ public class EWrapperImpl implements EWrapper {
 	@Override
 	public void position(String account, Contract contract, double pos,
 			double avgCost) {
-		System.out.println("Position. "+account+" - Symbol: "+contract.symbol()+", SecType: "+contract.secType()+", Currency: "+contract.currency()+", Position: "+pos+", Avg cost: "+avgCost);
+		//System.out.println("Position. "+account+" - Symbol: "+contract.symbol()+", SecType: "+contract.secType()+", Currency: "+contract.currency()+", Position: "+pos+", Avg cost: "+avgCost);
+	    instance.updatePosition(contract.symbol(), pos,avgCost);
 	}
 	//! [position]
 	
@@ -344,6 +342,7 @@ public class EWrapperImpl implements EWrapper {
 	@Override
 	public void positionEnd() {
 		System.out.println("PositionEnd \n");
+		instance.relPosition();
 	}
 	//! [positionend]
 	
