@@ -44,6 +44,8 @@ public class Testbed {
     private static EWrapperImpl wrapper = null;
     private static boolean isLast=false;
     
+   
+    
     private static String lastPrediction(String filename) {
     	try {
 			
@@ -57,7 +59,7 @@ public class Testbed {
 			  }
 		    bufferedReader.close();
 		    String[] llc = lastLine.split(",");
-		    String what = llc[1];
+		    String what = llc[2];
 		    return what;
 		} catch (Exception e) {
 			return "";
@@ -133,6 +135,10 @@ public class Testbed {
 		}).start();
 		
 		instance.reqPosition();
+		
+		if (args[1].equals("prev")) {
+			Shared.simyear = Integer.parseInt(args[2]);
+		}
 		
 		if (args[1].equals("mail")) {
 			sendemail("maillog.csv");

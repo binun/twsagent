@@ -18,6 +18,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -53,6 +54,8 @@ public class Shared {
 	private List<String> shorts=new ArrayList<String>();
 	
     private static double investment = 500;
+    
+    public static int simyear = -1;
     
     private void decomposeLast(String msg) {
     	
@@ -214,8 +217,17 @@ public class Shared {
 		if (i<0)
 			return;
 		
-		Calendar cal = Calendar.getInstance();
-		cal.add(Calendar.DAY_OF_MONTH, -1);
+		Calendar cal = null;
+		String period = "4 M";
+		if (simyear<0) {
+			cal = Calendar.getInstance();
+		    cal.add(Calendar.DAY_OF_MONTH, -1);
+		}
+		else {
+			cal = new GregorianCalendar(simyear,0,0);	
+			period = "12 M";
+		}
+		
         SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
         String formatted = form.format(cal.getTime());
         System.out.println("Requesting history for " + sticker);
@@ -223,7 +235,7 @@ public class Shared {
         mclient.reqHistoricalData(startId+i, 
         		ContractSamples.USStockAtSmart(sticker), 
         		formatted, 
-        		"4 M", 
+        		period, 
         		"1 day", 
         		"MIDPOINT", 
         		0, 
@@ -358,7 +370,7 @@ public class Shared {
 		if (!theDir.exists())
 		     theDir.mkdir();
 		else {
-			if (last==false) 
+			if (last==false && simyear<0) 
 			  for(File file: theDir.listFiles()) 
 			      if (!file.isDirectory()) 
 			          file.delete();
