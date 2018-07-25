@@ -38,7 +38,8 @@ public class Testbed {
 //	private static String myemail = "binunalex@gmail.com";
 //	private static String mypass = "BW~35wc&";
 	
-	private static String targets = "binunalex@gmail.com,shlomidolev@gmail.com";
+	private static String targets = "binunalex@gmail.com,shlomidolev@gmail.com,chen.munitz@gmail.com";
+	//private static String targets = "binunalex@gmail.com";
 	private static String header = "PREDICTION";
 	
     private static EWrapperImpl wrapper = null;
@@ -110,6 +111,8 @@ public class Testbed {
 		if (args[1].equals("last")) 
 			isLast=true;
 		
+		header = args[0].toUpperCase() + " " + header;
+		
         wrapper = new EWrapperImpl(args[0],isLast);
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
@@ -147,13 +150,19 @@ public class Testbed {
 //			plan.put("WMT", -1.0);
 			String lp = lastPrediction("maillog.csv");
 			instance.runAsPlan(lp);
+			for (int i=0; i <10;i++) {
+				Thread.sleep(1000);
+				if (instance.allUpdated())
+					break;
+				
+			}
 			return;
 		}
 		
 		instance.requestAllData(isLast);
 		
-		for (int i=0; i <120;i++) {
-			Thread.sleep(500);
+		for (int i=0; i <10;i++) {
+			Thread.sleep(1000);
 			if (instance.allUpdated())
 				break;
 			

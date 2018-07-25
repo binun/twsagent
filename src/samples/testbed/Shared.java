@@ -48,7 +48,9 @@ public class Shared {
 	private static Shared instance = null;
 	private EClient mclient = null;
 	private Map<String,Double> lastCloses = new HashMap<String,Double>();
+	
 	private Map<String,Double> position = new HashMap<String,Double>();
+	private Map<String,Double> costs = new HashMap<String,Double>();
 	
 	private List<String> longs=new ArrayList<String>();
 	private List<String> shorts=new ArrayList<String>();
@@ -108,9 +110,10 @@ public class Shared {
 
 	
 	public synchronized void updatePosition(String sticker,double pos, double avgCost) {
-		System.out.println("Position. "+sticker+", Position: "+pos);
+		System.out.println("Position for "+sticker+" is "+pos + " shares " + " share cost: " + avgCost);
 	    
 		position.put(sticker, pos);
+		costs.put(sticker,avgCost);
 	}
 	
 	public void runAsPlan(String what) {
@@ -172,13 +175,7 @@ public class Shared {
 	     this.placeOrder(key, action, quantity);	
 		}
 		
-		for (int i=0; i < 60; i++)
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+
 	}
 	
 	public synchronized int getStartID() {
