@@ -35,17 +35,45 @@ public class Testbed {
 	private static String myemail = "astartradingltd@gmail.com";
 	private static String mypass = "a*strading";
 	
-//	private static String myemail = "binunalex@gmail.com";
-//	private static String mypass = "BW~35wc&";
 	
-	private static String targets = "binunalex@gmail.com,shlomidolev@gmail.com,chen.munitz@gmail.com";
-	//private static String targets = "binunalex@gmail.com";
+	//private static String targets = "binunalex@gmail.com,shlomidolev@gmail.com,chen.munitz@gmail.com";
+	private static String targets = "binunalex@gmail.com";
 	private static String header = "PREDICTION";
 	
     private static EWrapperImpl wrapper = null;
     private static boolean isLast=false;
     
-   
+    private static void parseOptions() {
+    	String filename = "twsopts.txt";
+    	if (new File(filename).exists()==false) {
+    		System.out.println("No options");
+    		System.exit(0);
+    	}
+    	try {
+    	  BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(filename)));
+	    
+	      String strLine = null, tmp="";
+		  while ((tmp = bufferedReader.readLine()) != null) {
+		     strLine = tmp;
+		     String[] opt = strLine.split("=");
+		     if (opt[0].toLowerCase().equals("orders")) {
+		    	 if (opt[1].toUpperCase().equals("true"))
+		    		 Shared.orderyes=true;
+		    	 else
+		    		 Shared.orderyes=false;
+		     }
+		     
+		     if (opt[0].toLowerCase().equals("mails")) {
+		    	 targets = opt[1];
+		     }
+		     
+		  }
+	      bufferedReader.close();
+	    
+	   } catch (Exception e) {
+		return;
+	}
+    }
     
     private static String lastPrediction(String filename) {
     	try {
@@ -110,6 +138,8 @@ public class Testbed {
 				
 		if (args[1].equals("last")) 
 			isLast=true;
+		
+		parseOptions();
 		
 		header = args[0].toUpperCase() + " " + header;
 		

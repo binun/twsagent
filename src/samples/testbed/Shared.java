@@ -58,6 +58,7 @@ public class Shared {
     private static double investment = 500;
     
     public static int simyear = -1;
+    public static boolean orderyes=false;
     
     private void decomposeLast(String msg) {
     	
