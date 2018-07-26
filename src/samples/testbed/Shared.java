@@ -158,7 +158,8 @@ public class Shared {
 	public synchronized void placeOrder(String sticker,String action,double quantity) {
 		
 		System.out.println(sticker + " to " + action);
-		mclient.placeOrder(curOrder++, ContractSamples.USStockAtSmart(sticker), OrderSamples.MarketOrder(action, quantity));
+		if (orderyes==true)
+		   mclient.placeOrder(curOrder++, ContractSamples.USStockAtSmart(sticker), OrderSamples.MarketOrder(action, quantity));
 	}
 	
 	public synchronized void executeOrders(Map<String,Double> plan) {
