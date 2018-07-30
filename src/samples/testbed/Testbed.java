@@ -35,9 +35,11 @@ public class Testbed {
 	private static String myemail = "astartradingltd@gmail.com";
 	private static String mypass = "a*strading";
 	
+	//private static String myemail = "binunalex@gmail.com";
+	//private static String mypass = "BW~35wc&";
 	
-	//private static String targets = "binunalex@gmail.com,shlomidolev@gmail.com,chen.munitz@gmail.com";
-	private static String targets = "binunalex@gmail.com";
+	
+	private static String targets = "";
 	private static String header = "PREDICTION";
 	
     private static EWrapperImpl wrapper = null;
@@ -56,14 +58,15 @@ public class Testbed {
 		  while ((tmp = bufferedReader.readLine()) != null) {
 		     strLine = tmp;
 		     String[] opt = strLine.split("=");
-		     if (opt[0].toLowerCase().equals("orders")) {
-		    	 if (opt[1].toUpperCase().equals("true"))
+		     String command = opt[0].toLowerCase();
+		     if (command.equals("orders")) {
+		    	 if (opt[1].toLowerCase().equals("true"))
 		    		 Shared.orderyes=true;
 		    	 else
 		    		 Shared.orderyes=false;
 		     }
 		     
-		     if (opt[0].toLowerCase().equals("mails")) {
+		     if (command.toLowerCase().equals("mails")) {
 		    	 targets = opt[1];
 		     }
 		     
@@ -94,6 +97,30 @@ public class Testbed {
 			return "";
 		}
     }
+    
+    private static String nearLastGain(String filename) {
+    	try {
+			
+		    BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(filename)));
+		    
+		    String strLine = null, tmp="",g="";
+			while ((tmp = bufferedReader.readLine()) != null) {
+			     strLine = tmp;
+			     if (strLine.length()>3) {
+			    	 String[] llc = strLine.split(",");
+			    	 String gain = llc[1];
+			    	 if (gain.length()>1)
+			    		 g = gain;
+			     }
+			    	 
+			  }
+		    bufferedReader.close();
+		    
+		    return g;
+		} catch (Exception e) {
+			return "";
+		}
+    }
 	
 	public static void sendemail(String filename) {
 		Properties props = new Properties();
@@ -113,12 +140,13 @@ public class Testbed {
 				});
 		try {
 		String what = lastPrediction(filename);
+		String prev = nearLastGain(filename);
 		Message message = new MimeMessage(session);
 		message.setFrom(new InternetAddress(myemail));
 		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(targets));
 		
 		message.setSubject(header);
-		message.setText(what);
+		message.setText("Current Prediction: "+what + "\nYesterday gain: "+prev);
 
 		Transport.send(message);
 
@@ -132,17 +160,18 @@ public class Testbed {
 	}
     
 	public static void main(String[] args) throws InterruptedException {
-		
+		int delay = 10;
 		if (args.length<1)
 			return;
 				
-		if (args[1].equals("last")) 
+		if (args[1].equals("last")) {
 			isLast=true;
+		}
 		
 		parseOptions();
 		
 		header = args[0].toUpperCase() + " " + header;
-		
+		String maillog = args[0].toLowerCase()+ "_maillog.csv";
         wrapper = new EWrapperImpl(args[0],isLast);
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
@@ -174,18 +203,21 @@ public class Testbed {
 		}
 		
 		if (args[1].equals("mail")) {
-			sendemail("maillog.csv");
+		    if (targets.length()>3)
+			  sendemail(maillog);
 //			Map<String,Double> plan = new HashMap<String,Double>();
 //			plan.put("CVX", 1.0);
 //			plan.put("WMT", -1.0);
-			String lp = lastPrediction("maillog.csv");
+			String lp = lastPrediction(maillog);
 			instance.runAsPlan(lp);
 			for (int i=0; i <10;i++) {
 				Thread.sleep(1000);
-				if (instance.allUpdated())
-					break;
+				//if (instance.allUpdated())
+					//break;
 				
 			}
+			instance.cancelAll();
+			m_client.eDisconnect();
 			return;
 		}
 		
@@ -193,8 +225,8 @@ public class Testbed {
 		
 		for (int i=0; i <10;i++) {
 			Thread.sleep(1000);
-			if (instance.allUpdated())
-				break;
+			//if (instance.allUpdated())
+				//break;
 			
 		}
 		
@@ -205,7 +237,7 @@ public class Testbed {
 			   instance.flushLastData();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 		instance.cancelAll();
 		m_client.eDisconnect();

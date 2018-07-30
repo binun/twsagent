@@ -246,7 +246,7 @@ public class EWrapperImpl implements EWrapper {
 	//! [historicaldata]
 	@Override
 	public void historicalData(int reqId, Bar bar) {
-		System.out.println("HIST "+reqId+" Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
+		//System.out.println("HIST "+reqId+" Date: "+bar.time()+", Open: "+bar.open()+", High: "+bar.high()+", Low: "+bar.low()+", Close: "+bar.close()+", Volume: "+bar.volume());
 		
 		instance.updateHistData(reqId, bar);
 	}
@@ -255,7 +255,8 @@ public class EWrapperImpl implements EWrapper {
 	//! [historicaldataend]
 	@Override
 	public void historicalDataEnd(int reqId, String startDateStr, String endDateStr) {
-		System.out.println("HistoryEnd " + " Start Date: "+startDateStr+", End Date: "+endDateStr);
+		//System.out.println("HistoryEnd " + " Start Date: "+startDateStr+", End Date: "+endDateStr);
+		System.out.println("Hs "+ instance.getSticker(reqId));
 		instance.oneMore(reqId);
 		//this.m_histMutex.notify();
 	}
@@ -290,7 +291,7 @@ public class EWrapperImpl implements EWrapper {
 	@Override
 	public void realtimeBar(int reqId, long time, double open, double high,
 			double low, double close, long volume, double wap, int count) {
-		System.out.println("RealTimeBars. " + reqId + " - Time: " + time + ", Open: " + open + ", High: " + high + ", Low: " + low + ", Close: " + close + ", Volume: " + volume + ", Count: " + count + ", WAP: " + wap);
+		//System.out.println("RealTimeBars. " + reqId + " - Time: " + time + ", Open: " + open + ", High: " + high + ", Low: " + low + ", Close: " + close + ", Volume: " + volume + ", Count: " + count + ", WAP: " + wap);
 	    instance.updateLastData(reqId, high, close, volume);
 	}
 	//! [realtimebar]
@@ -409,7 +410,7 @@ public class EWrapperImpl implements EWrapper {
 		//
 		if (errorCode==200) {
 		errors++;
-		System.out.println("Error. Id: " + id + ", Code: " + errorCode + " Detail: " + errorMsg+ "\n");
+		System.out.println("Error:Sticker: " + instance.getSticker(id) + ", Code: " + errorCode + " Detail: " + errorMsg+ "\n");
 		//instance.updateLastData(id,0.0,0.0,0.0);
 		}
 	}

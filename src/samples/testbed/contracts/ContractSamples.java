@@ -172,7 +172,7 @@ public class ContractSamples {
 		contract.symbol(sticker);
 		contract.currency("USD");
 		contract.secType("STK");
-		contract.exchange("SMART");
+		contract.exchange("SMART"); 
 		contract.primaryExch("ISLAND");
 		
 		return contract;

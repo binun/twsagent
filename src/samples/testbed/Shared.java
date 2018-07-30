@@ -89,7 +89,9 @@ public class Shared {
 		}
     }
 			
-		
+    public String getSticker(int id) {
+    	return stickers.get(id-startId);
+    }
     public void setOrderId(int orderId) {
     	curOrder = orderId;
     	System.out.println("Next Valid Id: ["+curOrder+"]");
@@ -229,8 +231,9 @@ public class Shared {
 		
         SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
         String formatted = form.format(cal.getTime());
-        System.out.println("Requesting history for " + sticker);
-        if (last==false)
+        
+        if (last==false) {
+        //System.out.println("Requesting history for " + sticker);
         mclient.reqHistoricalData(startId+i, 
         		ContractSamples.USStockAtSmart(sticker), 
         		formatted, 
@@ -241,9 +244,13 @@ public class Shared {
         		1, 
         		false, 
         		null);
+        }
 		
-        else
+        else {
+        	//System.out.println("\nRequesting history for " + sticker);
+        	System.out.println();
         	mclient.reqRealTimeBars(startId+i, ContractSamples.USStockAtSmart(sticker), 5, "MIDPOINT", false, null);
+        }
 	}
 	
 	public synchronized void reportError() {
@@ -253,10 +260,12 @@ public class Shared {
 	public synchronized void updateLastData(int order, double high,double close, double volume) {
 		int st = order-startId;
 		String sticker = stickers.get(st);
-		if (lastCloses.containsKey(sticker)==false)
+		if (lastCloses.containsKey(sticker)==false) {
+		   System.out.print(" LD " + sticker);
 	       lastCloses.put(sticker, close);
+		}
 		 
-		System.out.println("            Sticker " + sticker + " got update ");
+		
 		  
 		//mclient.cancelRealTimeBars(order);
 	}
@@ -265,7 +274,7 @@ public class Shared {
 		int st = order-startId;
 	   
 		this.updateStickerHist(stickers.get(st), bar);
-		System.out.println("            Sticker " + stickers.get(st) + " got history item ");
+		//System.out.println("            Sticker " + stickers.get(st) + " got history item ");
 		//mclient.cancelHistoricalData(order);
 		 
 		
@@ -308,13 +317,12 @@ public class Shared {
 			File p = new File(path); 
 			if (p.exists()==false)
 				continue;
-			
-			System.out.print(" Saving data for " + st + " ");
+	
 			
 			Double val=1.0;
 			if (lastCloses.containsKey(st)) {
 			   val = lastCloses.get(st);
-			   System.out.println(":real last data");
+			   System.out.print(" Last data for " + st + " ");
 			}
 			else {
 				  
