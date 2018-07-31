@@ -258,6 +258,7 @@ public class EWrapperImpl implements EWrapper {
 		//System.out.println("HistoryEnd " + " Start Date: "+startDateStr+", End Date: "+endDateStr);
 		System.out.println("Hs "+ instance.getSticker(reqId));
 		instance.oneMore(reqId);
+		
 		//this.m_histMutex.notify();
 	}
 	//! [historicaldataend]

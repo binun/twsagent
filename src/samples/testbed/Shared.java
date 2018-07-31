@@ -38,9 +38,9 @@ import java.util.List;
 public class Shared {
 	
 	private String dir = "";
-	private int errors=0;
-	private ArrayList<String> stickers = new ArrayList<String>();
 	
+	private ArrayList<String> stickers = new ArrayList<String>();
+	public Set<String> blackList = new HashSet<String>();
 	private Set<Integer> allStickers = new HashSet<Integer>();
     public  int startId=1;
     private volatile int curOrder=-1;
@@ -219,10 +219,10 @@ public class Shared {
 			return;
 		
 		Calendar cal = null;
-		String period = "4 M";
+		String period = "6 M";
 		if (simyear<0) {
 			cal = Calendar.getInstance();
-		    cal.add(Calendar.DAY_OF_MONTH, -1);
+		    //cal.add(Calendar.DAY_OF_MONTH, -1);
 		}
 		else {
 			cal = new GregorianCalendar(simyear,0,0);	
@@ -254,7 +254,15 @@ public class Shared {
 	}
 	
 	public synchronized void reportError() {
-		errors++;
+		
+	}
+	
+	public void blistLD() {
+		for (String s: stickers) {
+		if (s.length()>=1 && lastCloses.containsKey(s)==false) {
+			blackList.add(s);
+		}
+	   }
 	}
 	
 	public synchronized void updateLastData(int order, double high,double close, double volume) {
@@ -322,7 +330,7 @@ public class Shared {
 			Double val=1.0;
 			if (lastCloses.containsKey(st)) {
 			   val = lastCloses.get(st);
-			   System.out.print(" Last data for " + st + " ");
+			   //System.out.println(" Write Last data for " + st + " ");
 			}
 			else {
 				  
@@ -357,6 +365,7 @@ public class Shared {
 	
 	public synchronized void oneMore(int orderId) {
 		allStickers.add(new Integer(orderId));
+		blackList.remove(stickers.get(orderId-startId));
 	}
 	
 	public void cancelAll() {
@@ -397,6 +406,11 @@ public class Shared {
 		} catch (IOException e) {
 			System.out.println("No sticker set");
 			System.exit(0);
+		}
+		
+		for (String s:stickers) {
+			blackList.add(s);
+			
 		}
 	}
 	

@@ -146,7 +146,7 @@ public class Testbed {
 		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(targets));
 		
 		message.setSubject(header);
-		message.setText("Current Prediction: "+what + "\nYesterday gain: "+prev);
+		message.setText("Current Prediction: "+ what + "  " + "Prev.business day gain: "+prev);
 
 		Transport.send(message);
 
@@ -227,7 +227,27 @@ public class Testbed {
 			Thread.sleep(1000);
 			//if (instance.allUpdated())
 				//break;
-			
+		}
+		
+		File datasource = new File(args[0]+"_csv");
+		
+		if (isLast) {
+		  instance.blackList.clear();
+		  instance.blistLD();
+		}
+		
+        if (datasource.exists()) {
+		for (String s: instance.blackList) {
+		
+			  for(File file: datasource.listFiles())
+			    {
+		          String fname = file.getName();
+		          if (s.length()>=1 && fname.contains(s)) {
+		        	 System.out.println("Waited for history for " + s + " in vain");
+				     file.delete();
+		          }
+			    }
+		    }
 		}
 		
 		
