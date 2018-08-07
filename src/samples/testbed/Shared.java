@@ -40,7 +40,7 @@ public class Shared {
 	private String dir = "";
 	
 	private ArrayList<String> stickers = new ArrayList<String>();
-	public Set<String> blackList = new HashSet<String>();
+	public Map<String,Integer> blackList = new HashMap<String,Integer>();
 	private Set<Integer> allStickers = new HashSet<Integer>();
     public  int startId=1;
     private volatile int curOrder=-1;
@@ -219,10 +219,11 @@ public class Shared {
 			return;
 		
 		Calendar cal = null;
-		String period = "6 M";
+		String period = "12 M";
 		if (simyear<0) {
 			cal = Calendar.getInstance();
-		    //cal.add(Calendar.DAY_OF_MONTH, -1);
+			if (last==false)
+		     cal.add(Calendar.DAY_OF_MONTH, -1);
 		}
 		else {
 			cal = new GregorianCalendar(simyear,0,0);	
@@ -232,7 +233,10 @@ public class Shared {
         SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
         String formatted = form.format(cal.getTime());
         
-        if (last==false) {
+        if (last==true) 
+        	formatted="";
+        
+        
         //System.out.println("Requesting history for " + sticker);
         mclient.reqHistoricalData(startId+i, 
         		ContractSamples.USStockAtSmart(sticker), 
@@ -244,26 +248,13 @@ public class Shared {
         		1, 
         		false, 
         		null);
-        }
-		
-        else {
-        	//System.out.println("\nRequesting history for " + sticker);
-        	System.out.println();
-        	mclient.reqRealTimeBars(startId+i, ContractSamples.USStockAtSmart(sticker), 5, "MIDPOINT", false, null);
-        }
+    
 	}
 	
 	public synchronized void reportError() {
 		
 	}
 	
-	public void blistLD() {
-		for (String s: stickers) {
-		if (s.length()>=1 && lastCloses.containsKey(s)==false) {
-			blackList.add(s);
-		}
-	   }
-	}
 	
 	public synchronized void updateLastData(int order, double high,double close, double volume) {
 		int st = order-startId;
@@ -365,7 +356,8 @@ public class Shared {
 	
 	public synchronized void oneMore(int orderId) {
 		allStickers.add(new Integer(orderId));
-		blackList.remove(stickers.get(orderId-startId));
+		String s = stickers.get(orderId-startId);
+		blackList.put(s, 1);
 	}
 	
 	public void cancelAll() {
@@ -377,7 +369,7 @@ public class Shared {
 	
 	
 
-	private Shared(EClient client, String index,boolean last) {
+	private Shared(EClient client, String index) {
 		
 		this.mclient = client;
 		this.dir=index+"_csv";
@@ -386,7 +378,7 @@ public class Shared {
 		if (!theDir.exists())
 		     theDir.mkdir();
 		else {
-			if (last==false && simyear<0) 
+			if (simyear<0) 
 			  for(File file: theDir.listFiles()) 
 			      if (!file.isDirectory()) 
 			          file.delete();
@@ -409,14 +401,13 @@ public class Shared {
 		}
 		
 		for (String s:stickers) {
-			blackList.add(s);
-			
+			blackList.put(s, 0);
 		}
 	}
 	
-	public static Shared getInstance(EClient c, String d, boolean last) {
+	public static Shared getInstance(EClient c, String d) {
 		if (instance==null)
-			instance=new Shared(c, d,last);
+			instance=new Shared(c, d);
 		return instance;
 	}
 }

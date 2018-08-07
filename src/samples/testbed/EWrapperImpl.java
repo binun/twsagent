@@ -30,10 +30,10 @@ public class EWrapperImpl implements EWrapper {
 	//! [socket_declare]
 	
 	//! [socket_init]
-	public EWrapperImpl(String index,boolean islast) {
+	public EWrapperImpl(String index) {
 		readerSignal = new EJavaSignal();
 		clientSocket = new EClientSocket(this, readerSignal);
-		instance = Shared.getInstance(clientSocket,index,islast);
+		instance = Shared.getInstance(clientSocket,index);
 		this.index = index;
 	}
 	//! [socket_init]

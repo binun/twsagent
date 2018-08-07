@@ -11,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +24,16 @@ import com.ib.client.EReaderSignal;
 
 
 import java.util.Properties;
+
+import javax.activation.DataHandler;
+import javax.activation.FileDataSource;
+import javax.mail.BodyPart;
 import javax.mail.Message;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeBodyPart;
 import javax.mail.internet.MimeMessage;
 
 public class Testbed {
@@ -40,10 +46,11 @@ public class Testbed {
 	
 	
 	private static String targets = "";
+	private static String reviewers = "";
 	private static String header = "PREDICTION";
 	
     private static EWrapperImpl wrapper = null;
-    private static boolean isLast=false;
+    private static boolean isLast=true;
     
     private static void parseOptions() {
     	String filename = "twsopts.txt";
@@ -70,12 +77,33 @@ public class Testbed {
 		    	 targets = opt[1];
 		     }
 		     
+		     if (command.toLowerCase().equals("reviewers")) {
+		    	 reviewers = opt[1];
+		     }
+		     
 		  }
 	      bufferedReader.close();
 	    
 	   } catch (Exception e) {
 		return;
-	}
+	   }
+    	
+       if (reviewers.length()>3) {
+	    	Date date = new Date() ;
+	    	SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm") ;
+	    	dateFormat.format(date);
+            boolean good_time = false;
+            try {
+            	if(dateFormat.parse(dateFormat.format(date)).before(dateFormat.parse("23:00")))
+            		good_time=true;
+            }
+            catch (Exception e) {
+            	
+            }
+	        if (good_time==true) {
+	        	targets=targets+","+reviewers;
+	        }
+       }
     }
     
     private static String lastPrediction(String filename) {
@@ -122,7 +150,10 @@ public class Testbed {
 		}
     }
 	
-	public static void sendemail(String filename) {
+	public static void sendemail(String filename,String addresses) {
+		
+		if (addresses.length()<=1)
+			return;
 		Properties props = new Properties();
 		
 		props.put("mail.smtp.host", "smtp.gmail.com");
@@ -143,7 +174,7 @@ public class Testbed {
 		String prev = nearLastGain(filename);
 		Message message = new MimeMessage(session);
 		message.setFrom(new InternetAddress(myemail));
-		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(targets));
+		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(addresses));
 		
 		message.setSubject(header);
 		message.setText("Current Prediction: "+ what + "  " + "Prev.business day gain: "+prev);
@@ -160,22 +191,22 @@ public class Testbed {
 	}
     
 	public static void main(String[] args) throws InterruptedException {
-		int delay = 10;
+		
 		if (args.length<1)
 			return;
 				
-		if (args[1].equals("last")) {
-			isLast=true;
+		if (args.length>1 && args[1].equals("hist")) {
+			isLast=false;
 		}
 		
 		parseOptions();
 		
 		header = args[0].toUpperCase() + " " + header;
 		String maillog = args[0].toLowerCase()+ "_maillog.csv";
-        wrapper = new EWrapperImpl(args[0],isLast);
+        wrapper = new EWrapperImpl(args[0]);
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
-		final Shared instance = Shared.getInstance(m_client, args[0],isLast);
+		final Shared instance = Shared.getInstance(m_client, args[0]);
 		
 		
 		//! [connect]
@@ -198,13 +229,15 @@ public class Testbed {
 		
 		instance.reqPosition();
 		
-		if (args[1].equals("prev")) {
+		if (args.length>1 && args[1].equals("prev")) {
 			Shared.simyear = Integer.parseInt(args[2]);
 		}
 		
-		if (args[1].equals("mail")) {
+		if (args.length>1 && args[1].equals("mail")) {
 		    if (targets.length()>3)
-			  sendemail(maillog);
+			  sendemail(maillog,targets);
+		    
+		    
 //			Map<String,Double> plan = new HashMap<String,Double>();
 //			plan.put("CVX", 1.0);
 //			plan.put("WMT", -1.0);
@@ -231,18 +264,15 @@ public class Testbed {
 		
 		File datasource = new File(args[0]+"_csv");
 		
-		if (isLast) {
-		  instance.blackList.clear();
-		  instance.blistLD();
-		}
+
 		
         if (datasource.exists()) {
-		for (String s: instance.blackList) {
+		for (String s: instance.blackList.keySet()) {
 		
 			  for(File file: datasource.listFiles())
 			    {
 		          String fname = file.getName();
-		          if (s.length()>=1 && fname.contains(s)) {
+		          if (s.length()>=1 && instance.blackList.get(s)==0 && fname.contains(s)) {
 		        	 System.out.println("Waited for history for " + s + " in vain");
 				     file.delete();
 		          }
@@ -252,13 +282,7 @@ public class Testbed {
 		
 		
 		System.out.println("Done");
-		try {
-			if (isLast)
-			   instance.flushLastData();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			//e.printStackTrace();
-		}
+		
 		instance.cancelAll();
 		m_client.eDisconnect();
 	}
