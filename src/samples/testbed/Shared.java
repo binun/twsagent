@@ -219,7 +219,7 @@ public class Shared {
 			return;
 		
 		Calendar cal = null;
-		String period = "12 M";
+		String period = Testbed.histlen;
 		if (simyear<0) {
 			cal = Calendar.getInstance();
 			if (last==false)
@@ -372,7 +372,7 @@ public class Shared {
 	private Shared(EClient client, String index) {
 		
 		this.mclient = client;
-		this.dir=index+"_csv";
+		this.dir=index+"csv";
 	
 		File theDir = new File(dir); 
 		if (!theDir.exists())

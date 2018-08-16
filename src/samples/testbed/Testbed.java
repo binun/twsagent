@@ -48,6 +48,7 @@ public class Testbed {
 	private static String targets = "";
 	private static String reviewers = "";
 	private static String header = "PREDICTION";
+	public static String histlen = "115 D";
 	
     private static EWrapperImpl wrapper = null;
     private static boolean isLast=true;
@@ -79,6 +80,10 @@ public class Testbed {
 		     
 		     if (command.toLowerCase().equals("reviewers")) {
 		    	 reviewers = opt[1];
+		     }
+		     
+		     if (command.toLowerCase().equals("hist")) {
+		    	 histlen = opt[1]+" M";
 		     }
 		     
 		  }
@@ -119,7 +124,7 @@ public class Testbed {
 			  }
 		    bufferedReader.close();
 		    String[] llc = lastLine.split(",");
-		    String what = llc[2];
+		    String what = llc[1];
 		    return what;
 		} catch (Exception e) {
 			return "";
@@ -171,13 +176,13 @@ public class Testbed {
 				});
 		try {
 		String what = lastPrediction(filename);
-		String prev = nearLastGain(filename);
+		//String prev = nearLastGain(filename);
 		Message message = new MimeMessage(session);
 		message.setFrom(new InternetAddress(myemail));
 		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(addresses));
 		
 		message.setSubject(header);
-		message.setText("Current Prediction: "+ what + "  " + "Prev.business day gain: "+prev);
+		message.setText("Current prediction:"  + what);
 
 		Transport.send(message);
 
@@ -202,7 +207,7 @@ public class Testbed {
 		parseOptions();
 		
 		header = args[0].toUpperCase() + " " + header;
-		String maillog = args[0].toLowerCase()+ "_maillog.csv";
+		String maillog = args[0].toLowerCase()+ "csv_maillog.csv";
         wrapper = new EWrapperImpl(args[0]);
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
@@ -262,7 +267,7 @@ public class Testbed {
 				//break;
 		}
 		
-		File datasource = new File(args[0]+"_csv");
+		File datasource = new File(args[0]+"csv");
 		
 
 		
