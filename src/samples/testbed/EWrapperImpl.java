@@ -293,7 +293,7 @@ public class EWrapperImpl implements EWrapper {
 	public void realtimeBar(int reqId, long time, double open, double high,
 			double low, double close, long volume, double wap, int count) {
 		//System.out.println("RealTimeBars. " + reqId + " - Time: " + time + ", Open: " + open + ", High: " + high + ", Low: " + low + ", Close: " + close + ", Volume: " + volume + ", Count: " + count + ", WAP: " + wap);
-	    instance.updateLastData(reqId, high, close, volume);
+	    //instance.updateLastData(reqId, high, close, volume);
 	}
 	//! [realtimebar]
 	@Override

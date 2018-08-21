@@ -1,9 +1,12 @@
 package samples.testbed;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
@@ -41,17 +44,20 @@ public class Testbed {
 	private static String myemail = "astartradingltd@gmail.com";
 	private static String mypass = "a*strading";
 	
-	//private static String myemail = "binunalex@gmail.com";
-	//private static String mypass = "BW~35wc&";
-	
-	
 	private static String targets = "";
 	private static String reviewers = "";
 	private static String header = "PREDICTION";
 	public static String histlen = "115 D";
+	public static String until = "";
 	
     private static EWrapperImpl wrapper = null;
-    private static boolean isLast=true;
+    
+    private static String parseDate(String input) {
+    	Calendar cal = Calendar.getInstance();
+        SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
+        String formatted = form.format(cal.getTime());
+        return formatted;
+    }
     
     private static void parseOptions() {
     	String filename = "twsopts.txt";
@@ -83,8 +89,12 @@ public class Testbed {
 		     }
 		     
 		     if (command.toLowerCase().equals("hist")) {
-		    	 histlen = opt[1]+" M";
+		    	 histlen = opt[1];
 		     }
+		     
+//		     if (command.toLowerCase().equals("until")) {
+//		    	 until = parseDate(opt[1]);
+//		     }
 		     
 		  }
 	      bufferedReader.close();
@@ -131,6 +141,23 @@ public class Testbed {
 		}
     }
     
+    private static List<String> lastStickers(String prediction) {
+    	String [] components = prediction.split("[ :]+");
+    	List<String> r = new ArrayList<String>();
+    	for ( String c: components) {
+    		if (c.equals("Longs")) {
+    			continue;
+    		}
+    		
+    		if (c.equals("Shorts")) {
+    			continue;
+    		}
+    	r.add(c);
+    			
+    	}
+      return r;
+    }
+    
     private static String nearLastGain(String filename) {
     	try {
 			
@@ -155,7 +182,7 @@ public class Testbed {
 		}
     }
 	
-	public static void sendemail(String filename,String addresses) {
+	public static void sendemail(String filename,String addresses,Shared inst) {
 		
 		if (addresses.length()<=1)
 			return;
@@ -176,14 +203,43 @@ public class Testbed {
 				});
 		try {
 		String what = lastPrediction(filename);
-		//String prev = nearLastGain(filename);
+		List<String> lstickers = lastStickers(what);
+		Map<String,Double> oldcloses=new HashMap<String,Double>();
+	    
+		try {
+			ArrayList<String> lastDatas = (ArrayList<String>) Files.readAllLines(FileSystems.getDefault().getPath("laststicks.txt"), StandardCharsets.UTF_8);
+		    new File("laststicks.txt").delete();
+			oldcloses=new HashMap<String,Double>();
+		    for (String s: lastDatas) {
+		    	String [] components = s.split(" ");
+		    	oldcloses.put(components[0], Double.valueOf(components[1]));
+		    }
+		
+		} catch (IOException e) {
+			System.out.println("No previous data");
+			
+		}
+		
+		String stat = "";
+		if (oldcloses!=null) {
+			for(String s:lstickers) {
+				Double prev = oldcloses.get(s);
+				
+				stat=stat+s + ":"+prev+"; ";
+			}
+			stat="\n"+stat;
+		}
+	
+		
 		Message message = new MimeMessage(session);
 		message.setFrom(new InternetAddress(myemail));
 		message.setRecipients(Message.RecipientType.TO,InternetAddress.parse(addresses));
 		
 		message.setSubject(header);
-		message.setText("Current prediction:"  + what);
-
+		String msgtext="Current prediction:"  + what;
+		msgtext=msgtext+stat;
+		System.out.println(msgtext);
+        message.setText(msgtext);
 		Transport.send(message);
 
 		System.out.println("Done");
@@ -199,10 +255,6 @@ public class Testbed {
 		
 		if (args.length<1)
 			return;
-				
-		if (args.length>1 && args[1].equals("hist")) {
-			isLast=false;
-		}
 		
 		parseOptions();
 		
@@ -234,13 +286,9 @@ public class Testbed {
 		
 		instance.reqPosition();
 		
-		if (args.length>1 && args[1].equals("prev")) {
-			Shared.simyear = Integer.parseInt(args[2]);
-		}
-		
 		if (args.length>1 && args[1].equals("mail")) {
 		    if (targets.length()>3)
-			  sendemail(maillog,targets);
+			  sendemail(maillog,targets,instance);
 		    
 		    
 //			Map<String,Double> plan = new HashMap<String,Double>();
@@ -259,7 +307,7 @@ public class Testbed {
 			return;
 		}
 		
-		instance.requestAllData(isLast);
+		instance.requestAllData();
 		
 		for (int i=0; i <10;i++) {
 			Thread.sleep(1000);
@@ -284,8 +332,20 @@ public class Testbed {
 			    }
 		    }
 		}
-		
-		
+        
+ 
+        try {
+		       PrintWriter out_s = new PrintWriter(new BufferedWriter(new FileWriter("laststicks.txt", false)));
+		       for (String s: instance.stickers())
+		    	    if (s.length()>=1)
+					     out_s.println(s+" "+instance.lastCloses.get(s));
+			   out_s.close();  
+		          
+		    } catch (Exception e) {
+		            return;
+		    }
+       
+    
 		System.out.println("Done");
 		
 		instance.cancelAll();

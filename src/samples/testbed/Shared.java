@@ -47,7 +47,8 @@ public class Shared {
 	
 	private static Shared instance = null;
 	private EClient mclient = null;
-	private Map<String,Double> lastCloses = new HashMap<String,Double>();
+	public Map<String,Double> lastCloses = new HashMap<String,Double>();
+	private String statfile="recent.txt";
 	
 	private Map<String,Double> position = new HashMap<String,Double>();
 	private Map<String,Double> costs = new HashMap<String,Double>();
@@ -57,7 +58,6 @@ public class Shared {
 	
     private static double investment = 500;
     
-    public static int simyear = -1;
     public static boolean orderyes=false;
     
     private void decomposeLast(String msg) {
@@ -92,6 +92,11 @@ public class Shared {
     public String getSticker(int id) {
     	return stickers.get(id-startId);
     }
+    
+    public String [] stickers() {
+    	return stickers.toArray(new String[0]);
+    }
+    
     public void setOrderId(int orderId) {
     	curOrder = orderId;
     	System.out.println("Next Valid Id: ["+curOrder+"]");
@@ -189,7 +194,7 @@ public class Shared {
 	public synchronized void setStartID(int st) {
 		startId = st;
 	}
-	public void requestAllData(boolean last) {
+	public void requestAllData() {
 		while (this.getStartID()==-1) {
 			try {
 				for (int i=0; i < 5; i++) Thread.sleep(1000);
@@ -200,7 +205,8 @@ public class Shared {
 		}
 		
 		for (String sticker: stickers) {
-			this.requestDataForSticker(sticker,last);
+			if (sticker.length()>0)
+			   this.requestDataForSticker(sticker);
 			
 			try {
 				Thread.sleep(1000);
@@ -213,30 +219,15 @@ public class Shared {
 	}
 	
 	
-	public synchronized void requestDataForSticker(String sticker,boolean last) {
+	public synchronized void requestDataForSticker(String sticker) {
 		int i = stickers.indexOf(sticker);
 		if (i<0)
 			return;
-		
-		Calendar cal = null;
+	
 		String period = Testbed.histlen;
-		if (simyear<0) {
-			cal = Calendar.getInstance();
-			if (last==false)
-		     cal.add(Calendar.DAY_OF_MONTH, -1);
-		}
-		else {
-			cal = new GregorianCalendar(simyear,0,0);	
-			period = "12 M";
-		}
-		
-        SimpleDateFormat form = new SimpleDateFormat("yyyyMMdd HH:mm:ss");
-        String formatted = form.format(cal.getTime());
+		String formatted = Testbed.until;
         
-        if (last==true) 
-        	formatted="";
-        
-        
+ 
         //System.out.println("Requesting history for " + sticker);
         mclient.reqHistoricalData(startId+i, 
         		ContractSamples.USStockAtSmart(sticker), 
@@ -259,10 +250,7 @@ public class Shared {
 	public synchronized void updateLastData(int order, double high,double close, double volume) {
 		int st = order-startId;
 		String sticker = stickers.get(st);
-		if (lastCloses.containsKey(sticker)==false) {
-		   System.out.print(" LD " + sticker);
-	       lastCloses.put(sticker, close);
-		}
+		
 		 
 		
 		  
@@ -284,7 +272,6 @@ public class Shared {
 	private void updateStickerHist(String st, Bar bar) {
 		
 		String path = this.dir+File.separator+st+".csv";
-		
 		try {
 		       PrintWriter out = new PrintWriter(new BufferedWriter(new FileWriter(path, true)));
 		       String datestr = bar.time().split(" ")[0];
@@ -294,8 +281,12 @@ public class Shared {
 		       double close = bar.close();
 		       double volume = bar.volume();
 		       
-		       out.println(datestr+" "+open+" "+high+" "+low+" "+close+" "+volume+"\n");
+		       out.println(datestr+" "+open+" "+high+" "+low+" "+close+" "+volume);
 		       out.close();
+		       
+		       lastCloses.put(st, close);
+		      
+		      
 		    } catch (Exception e) {
 		            return;
 		    }
@@ -377,12 +368,7 @@ public class Shared {
 		File theDir = new File(dir); 
 		if (!theDir.exists())
 		     theDir.mkdir();
-		else {
-			if (simyear<0) 
-			  for(File file: theDir.listFiles()) 
-			      if (!file.isDirectory()) 
-			          file.delete();
-		}
+		
 		
 		String stickernames = index+"_stickers.csv";
 		File f = new File(stickernames);
@@ -400,8 +386,12 @@ public class Shared {
 			System.exit(0);
 		}
 		
+		
+		System.out.println(stickers);
 		for (String s:stickers) {
 			blackList.put(s, 0);
+			lastCloses.put(s, 0.0);
+			
 		}
 	}
 	
