@@ -49,6 +49,7 @@ public class Testbed {
 	private static String header = "PREDICTION";
 	public static String histlen = "115 D";
 	public static String until = "";
+	public static boolean ordersCanceled=true;
 	
     private static EWrapperImpl wrapper = null;
     
@@ -65,6 +66,23 @@ public class Testbed {
     		System.out.println("No options");
     		System.exit(0);
     	}
+    	
+    	
+    	try {
+    	Date d = new Date() ;
+    	SimpleDateFormat df = new SimpleDateFormat("HH:mm") ;
+    	df.format(d);
+    	System.out.println(df.format(d));
+
+    	if(df.parse(df.format(d)).before(df.parse("23:00")))
+    	{
+    		ordersCanceled=false;
+    	}
+    	}
+    	catch (Exception e) {
+    		
+    	}
+    	
     	try {
     	  BufferedReader bufferedReader = new BufferedReader(new FileReader(new File(filename)));
 	    
@@ -74,7 +92,7 @@ public class Testbed {
 		     String[] opt = strLine.split("=");
 		     String command = opt[0].toLowerCase();
 		     if (command.equals("orders")) {
-		    	 if (opt[1].toLowerCase().equals("true"))
+		    	 if (opt[1].toLowerCase().equals("true") && ordersCanceled==false)
 		    		 Shared.orderyes=true;
 		    	 else
 		    		 Shared.orderyes=false;
@@ -257,9 +275,23 @@ public class Testbed {
 			return;
 		
 		parseOptions();
+		String mailHeader = "csv_maillog_b.csv";
+		try {
+	    	Date d = new Date() ;
+	    	SimpleDateFormat df = new SimpleDateFormat("HH:mm") ;
+	    	df.format(d);
+
+	    	if(df.parse(df.format(d)).before(df.parse("23:00")))
+	    		mailHeader = "csv_maillog_b.csv";
+	    	else
+	    		mailHeader = "csv_maillog_a.csv";
+	    }
+	    catch (Exception e) {		
+	    }		
+		
 		
 		header = args[0].toUpperCase() + " " + header;
-		String maillog = args[0].toLowerCase()+ "csv_maillog.csv";
+		String maillog = args[0].toLowerCase()+ mailHeader;
         wrapper = new EWrapperImpl(args[0]);
 		final EClientSocket m_client = wrapper.getClient();
 		final EReaderSignal m_signal = wrapper.getSignal();
